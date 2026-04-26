@@ -10,6 +10,104 @@ description: >
   "criativos de imagem", "anúncio de remarketing", ou /criar-anuncio.
 ---
 
+---
+
+## 🚀 Setup conversacional (primeira vez)
+
+> Quando rodar `/cockpit-creative` pela primeira vez ou `/cockpit-creative setup`.
+
+### Passo 1 — Verificar pré-requisitos
+
+> "Cockpit Creative gera 10 criativos de imagem por demanda. Pra funcionar:
+>
+> 1. Playwright (renderiza HTML em PNG) — eu instalo
+> 2. Identidade visual da agência ou cliente — vou perguntar
+> 3. Estilo de criativo preferido
+>
+> Vamos? (vai/cancelar)"
+
+### Passo 2 — Instalar Playwright
+
+```bash
+cd ~/Cockpit && npx playwright install chromium
+```
+
+> "✅ Playwright instalado."
+
+### Passo 3 — Configurar identidade visual
+
+> "Agora a identidade visual. Tu quer:
+>
+> 1. **Identidade da agência** (mesma pra todos clientes)
+> 2. **Por cliente** (cada cliente tem sua identidade — recomendado)
+>
+> Qual? (1/2)"
+
+Se 2: explicar que cada vez que gerar criativo, vai usar identidade do cliente em `clientes/[slug]/marca/`.
+
+Pra cada identidade (agência ou cliente):
+
+> "Me passa:
+>
+> - **Cor principal** (hex, ex: #FF5C35)
+> - **Cor secundária** (hex)
+> - **Fonte preferida** (ou diz 'padrão')
+> - **Logo** (caminho do arquivo, ou pula se ainda não tem)
+> - **Estilo geral**:
+>   1. Minimalista — clean, muito espaço em branco
+>   2. Bold — impactante, contrastes fortes
+>   3. Editorial — tipográfico, elegante"
+
+Salvar em `marca/design-guide.md` (ou `clientes/[slug]/marca/design-guide.md`).
+
+### Passo 4 — Criar pasta de criativos no _modelo/
+
+```bash
+mkdir -p ~/Cockpit/clientes/_modelo/criativos/{aprovados,em-teste,arquivados}
+```
+
+(Já criada pelo `cockpit-setup`, mas confirmar.)
+
+### Passo 5 — Teste de validação ao vivo
+
+> "Vou gerar 3 criativos de teste agora pra ti ver. Tema: 'oferta de teste'.
+>
+> Confere a pasta `~/Cockpit/clientes/_teste/criativos/em-teste/` em uns 30 segundos."
+
+Rodar geração de teste. Mostrar caminho dos arquivos PNG gerados.
+
+### Passo 6 — Confirmação + próximos passos
+
+> "✅ **Cockpit Creative configurado.**
+>
+> Comandos:
+>
+> - `/cockpit-creative [cliente] tema "[tema]"` — gera 10 criativos
+> - `/cockpit-creative [cliente] reels tema "[tema]"` — formato 9:16
+> - `/cockpit-creative [cliente] feed tema "[tema]"` — formato 1:1
+>
+> **Stack quase completa.** Se tu comprou Install, falta:
+>
+> - Cockpit Track (server-side) — em construção
+> - Cockpit Google (Google Ads) — em construção
+>
+> Quando ficarem prontos, eu te aviso pra clonar.
+>
+> Por enquanto, tua stack tá assim:
+>
+> ✅ cockpit-setup
+> ✅ cockpit-onboarding
+> ✅ cockpit-dossie
+> ✅ cockpit-meta
+> ✅ cockpit-guardiao
+> ✅ cockpit-debrief
+> ✅ cockpit-report
+> ✅ cockpit-creative
+>
+> Boas pilotagens. 🚀"
+
+---
+
 # /criar-anuncio — Criação de Criativos de Imagem (Andrômeda)
 
 ## Contexto estratégico
