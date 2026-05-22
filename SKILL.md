@@ -1,347 +1,230 @@
 ---
 name: cockpit-creative
-description: >
-  Cria pacote de 10 criativos de imagem para anúncios Meta Ads dos experts da WinVision
-  (estrutura Andrômeda: 5 vídeos + 10 imagens por campanha, onde imagem funciona como
-  remarketing do vídeo). Gera copy usando Schwartz (diagnóstico de consciência) + Hormozi
-  (value equation), aplica compliance duplo (NZ para Fernanda + política Meta de serviços
-  financeiros), renderiza em dois formatos (feed 1080x1080 e stories 1080x1920) via Playwright.
-  Use quando o usuário disser "criar anúncio", "criar anúncios", "novo lote de criativos",
-  "criativos de imagem", "anúncio de remarketing", ou /criar-anuncio.
+description: Cria pacote de criativos de imagem para anuncios Meta Ads de qualquer cliente. Le o manual de marca do cliente (design-guide.md), o dossie (CLAUDE.md), e gera HTMLs com a identidade visual correta, renderizando em feed (1080x1080) e stories (1080x1920) via Playwright. Reusa setup conversacional e qualidade visual da skill /carrossel. Use quando o usuario disser "criar criativo", "novo lote de criativos", "criativos para [cliente]", "anuncios de imagem", "remarketing visual", ou /cockpit-creative.
 ---
 
+# /cockpit-creative — Criação de Criativos de Imagem para Meta Ads
+
+Cria criativos de imagem (estatica) pra anuncios Meta Ads com a identidade visual de cada cliente. Pega o manual de marca do cliente, le o dossie pra entender produto/promessa/avatar, gera copy direta e renderiza em HTML+PNG nos formatos feed (1080x1080) e stories (1080x1920).
+
+**Filosofia:** mesma qualidade visual da skill `/carrossel` aplicada a criativos pagos. Sem genericos de IA, sem layouts "AI slop". Identidade fiel ao manual de marca do cliente.
+
 ---
 
-## 🚀 Setup conversacional (primeira vez)
+## Setup (primeira vez)
 
-> Quando rodar `/cockpit-creative` pela primeira vez ou `/cockpit-creative setup`.
+Antes de criar criativos, checar 4 coisas. Se tudo OK, ir direto pro workflow.
 
-### Passo 1 — Verificar pré-requisitos
+### 1. Cliente
 
-> "Cockpit Creative gera 10 criativos de imagem por demanda. Pra funcionar:
->
-> 1. Playwright (renderiza HTML em PNG) — eu instalo
-> 2. Identidade visual da agência ou cliente — vou perguntar
-> 3. Estilo de criativo preferido
->
-> Vamos? (vai/cancelar)"
+Perguntar de qual cliente sao os criativos. Pode ser dito no comando (`/cockpit-creative Takaki`) ou perguntar:
 
-### Passo 2 — Instalar Playwright
+> "Pra qual cliente vamos criar os criativos? Me diz o nome ou slug (ex: takaki, elaine-sensitiva)"
+
+Validar:
+- Existe pasta `clientes/[slug]/` com `CLAUDE.md` (dossie) ja gerado pela skill `cockpit-dossie`?
+- Se nao existir, sugerir: *"Esse cliente ainda nao tem dossie. Roda `/cockpit-dossie [nome]` primeiro pra gente ter contexto. Depois volta aqui."*
+
+### 2. Design guide do cliente
+
+Ler `clientes/[slug]/design-guide.md`. Se nao existir ou estiver vazio:
+
+> "Pra criar os criativos com a identidade do [cliente], preciso de:
+> 1. Cor principal da marca (hex tipo #FF5C35, ou descreve)
+> 2. Cor secundaria/destaque (opcional)
+> 3. Fonte de titulo (preferencia ou descricao do estilo)
+> 4. Fonte de corpo
+> 5. Logo (arquivo na pasta `clientes/[slug]/marca/logo.png`)
+> 6. Estilo geral: clean/minimalista, bold/impactante, editorial/elegante, ou outro?
+> 7. Tem foto do expert/produto? (joga em `clientes/[slug]/marca/`)"
+
+Salvar em `clientes/[slug]/design-guide.md` no formato:
+
+```markdown
+# Design Guide — [Cliente]
+
+## Paleta
+- **Primaria:** #XXXXXX
+- **Secundaria:** #XXXXXX
+- **Fundo escuro:** #XXXXXX
+- **Fundo claro:** #XXXXXX
+- **Texto:** #XXXXXX
+
+## Tipografia
+- **Display (titulos):** [fonte]
+- **Body (corpo):** [fonte]
+
+## Logo
+- Arquivo: `clientes/[slug]/marca/logo.png`
+- Variacoes: claro / escuro (se tiver)
+
+## Estilo
+[clean / bold / editorial / outro]
+
+## Referencias visuais (opcional)
+- [link ou path de imagens de referencia]
+```
+
+Se o usuario nao souber as cores exatas, pegar do site do cliente (ler com WebFetch) ou usar a paleta do logo.
+
+### 3. Dossie do cliente
+
+Ler `clientes/[slug]/CLAUDE.md` (gerado pelo `/cockpit-dossie`). Precisa ter pelo menos:
+- Nome do produto principal
+- Promessa central
+- Avatar (dores + desejos)
+- Provas sociais
+
+Se faltar essas secoes, avisar e oferecer atualizar dossie primeiro: *"Pra escrever bons criativos preciso dessas infos. Quer rodar `/cockpit-dossie [cliente]` rapido pra completar?"*
+
+### 4. Playwright
+
+Verificar se ta instalado:
 
 ```bash
-cd ~/Cockpit && npx playwright install chromium
+npx playwright screenshot --help 2>/dev/null && echo "OK" || echo "INSTALAR"
 ```
 
-> "✅ Playwright instalado."
-
-### Passo 3 — Configurar identidade visual
-
-> "Agora a identidade visual. Tu quer:
->
-> 1. **Identidade da agência** (mesma pra todos clientes)
-> 2. **Por cliente** (cada cliente tem sua identidade — recomendado)
->
-> Qual? (1/2)"
-
-Se 2: explicar que cada vez que gerar criativo, vai usar identidade do cliente em `clientes/[slug]/marca/`.
-
-Pra cada identidade (agência ou cliente):
-
-> "Me passa:
->
-> - **Cor principal** (hex, ex: #FF5C35)
-> - **Cor secundária** (hex)
-> - **Fonte preferida** (ou diz 'padrão')
-> - **Logo** (caminho do arquivo, ou pula se ainda não tem)
-> - **Estilo geral**:
->   1. Minimalista — clean, muito espaço em branco
->   2. Bold — impactante, contrastes fortes
->   3. Editorial — tipográfico, elegante"
-
-Salvar em `marca/design-guide.md` (ou `clientes/[slug]/marca/design-guide.md`).
-
-### Passo 4 — Criar pasta de criativos no _modelo/
+Se nao tiver, instalar:
 
 ```bash
-mkdir -p ~/Cockpit/clientes/_modelo/criativos/{aprovados,em-teste,arquivados}
+npx playwright install chromium
 ```
 
-(Já criada pelo `cockpit-setup`, mas confirmar.)
-
-### Passo 5 — Teste de validação ao vivo
-
-> "Vou gerar 3 criativos de teste agora pra ti ver. Tema: 'oferta de teste'.
->
-> Confere a pasta `~/Cockpit/clientes/_teste/criativos/em-teste/` em uns 30 segundos."
-
-Rodar geração de teste. Mostrar caminho dos arquivos PNG gerados.
-
-### Passo 6 — Confirmação + próximos passos
-
-> "✅ **Cockpit Creative configurado.**
->
-> Comandos:
->
-> - `/cockpit-creative [cliente] tema "[tema]"` — gera 10 criativos
-> - `/cockpit-creative [cliente] reels tema "[tema]"` — formato 9:16
-> - `/cockpit-creative [cliente] feed tema "[tema]"` — formato 1:1
->
-> **Stack quase completa.** Se tu comprou Install, falta:
->
-> - Cockpit Track (server-side) — em construção
-> - Cockpit Google (Google Ads) — em construção
->
-> Quando ficarem prontos, eu te aviso pra clonar.
->
-> Por enquanto, tua stack tá assim:
->
-> ✅ cockpit-setup
-> ✅ cockpit-onboarding
-> ✅ cockpit-dossie
-> ✅ cockpit-meta
-> ✅ cockpit-guardiao
-> ✅ cockpit-debrief
-> ✅ cockpit-report
-> ✅ cockpit-creative
->
-> Boas pilotagens. 🚀"
+Avisar que demora ~30s na primeira vez.
 
 ---
 
-# /criar-anuncio — Criação de Criativos de Imagem (Andrômeda)
+## Workflow em 3 Fases
 
-## Contexto estratégico
+### Fase 1 — Briefing + Copy
 
-Estrutura Andrômeda de campanhas Meta Ads: 5 criativos em vídeo + 10 criativos em imagem por campanha. O vídeo é o primeiro contato. Quando a pessoa vê o vídeo, o algoritmo começa a servir as 10 imagens como remarketing. Por isso as 10 imagens precisam variar ângulo e layout — se forem parecidas, cansam rápido e perdem performance.
+1. Ler `clientes/[slug]/CLAUDE.md` (dossie) e `clientes/[slug]/design-guide.md`
+2. Perguntar briefing rapido:
 
-Esta skill produz o pacote das 10 imagens. Vídeo não é escopo.
+> "Vou criar criativos pro [cliente]. Antes de escrever, me confirma:
+> 1. Quantos criativos? (padrao: 5 imagens)
+> 2. Objetivo: leads / vendas / engajamento / outro?
+> 3. Angulo principal: dor / desejo / prova social / oferta / conteudo educativo?
+> 4. Tem algo NOVO pra destacar? (lancamento, promocao, evento, depoimento recente)
+> 5. Texto base ou ideia pronta, ou eu crio do zero?"
 
----
+3. Gerar **copy de cada criativo** seguindo principios:
+   - **Headline forte** (4-8 palavras, foco em dor ou desejo do avatar)
+   - **Sub-headline** (1-2 linhas, contexto)
+   - **CTA claro** (1 frase, acao especifica)
+   - **Logo + identidade** visivel mas sem dominar
+   - Usar a linguagem do dossie (termos proprios do avatar)
+   - Nada generico ("transforme sua vida", "descubra o segredo", etc.)
+   - Sem travessoes (a nao ser que `_contexto/preferencias.md` diga o contrario)
 
-## Dependências
+4. Variar angulos entre os criativos. Padrao de 5 criativos:
+   - 1 dor (avatar reconhece o problema)
+   - 1 desejo (avatar visualiza o resultado)
+   - 1 prova social (depoimento ou numero forte)
+   - 1 oferta direta (produto + beneficio)
+   - 1 autoridade (mostra expertise do expert)
 
-- **Obsidian vault:** `/Users/matheusjardim/claude/obsidian/Matheus/` — briefing do lançamento e dossiê do expert
-- **Biblioteca Hormozi:** `/Users/matheusjardim/claude/Ratos OS/lm/biblioteca/negocio/hormozi/` (100M Offers, 100M Leads, 100M Money Models)
-- **Skill de copy:** `schwartz-copy` (diagnóstico de consciência + níveis de sofisticação)
-- **Playwright CLI:** `npx playwright screenshot`. Se nunca usou: `npx playwright install chromium`
-- **Preferências de tom:** `_contexto/preferencias.md` (sem travessão, direto, sem corporativo)
+5. Mostrar copy completa no chat (todos os criativos com headline + sub + CTA)
 
----
+6. Salvar em `clientes/[slug]/criativos/YYYY-MM-DD_[campanha]/copy.md`
 
-## Experts suportados
-
-Hoje: **Fernanda Serraglia** (Vem Doleta).
-
-Se o usuário pedir para outro expert, pedir pra apontar o diretório de briefing/dossiê no Obsidian antes de prosseguir.
-
----
-
-## Workflow em 4 Fases
-
-### Fase 0 — Intake e contexto
-
-1. Perguntar: "Pra qual expert?" (se não disse)
-2. Perguntar: "Qual lançamento?" (default: o mais recente ativo na pasta de Lançamentos do Obsidian)
-3. Ler automaticamente:
-   - Briefing do lançamento (ex: `obsidian/Matheus/Trabalho/WinVision/Clientes/Fernanda Serraglia — Vem Doleta/Lançamentos/[LANÇAMENTO].md`)
-   - Dossiê do expert (ex: `.../Fernanda Serraglia — Dossiê.md`)
-   - CLAUDE.md do cliente (compliance, avatar, provas sociais)
-   - `hormozi-100m-offers.md` (pra aplicar value equation)
-4. Perguntar: "Algum ângulo ou promessa específica que você quer priorizar nesse lote? (ex: atacar objeção X, reforçar prova social Y, testar nova headline Z) — se não, eu escolho os 10 ângulos"
+**CHECKPOINT 1:** Esperar usuario aprovar copy antes de seguir pra Fase 2. Se pedir ajuste, mudar so o criativo apontado.
 
 ---
 
-### Fase 1 — Diagnóstico estratégico (Schwartz)
+### Fase 2 — Visual (HTMLs)
 
-Com o contexto em mãos, diagnosticar:
+1. **Acionar skill `frontend-design`** pra orientar o design dos criativos. Ler `~/.claude/skills/frontend-design/SKILL.md` e aplicar os principios:
+   - Tipografia distintiva (nao usar Inter/Arial genericos)
+   - Direcao estetica clara (escolher entre brutalist, editorial, minimal, etc., com base no `design-guide.md`)
+   - Detalhe visual em todo lugar (espacamento, hierarquia, contraste)
+   - Diferenciacao memoravel
 
-**A) Nível de consciência do público neste momento do lançamento**
-- Captação fria (antes do aquecimento) → maioria nível 4-5 (problem/unaware)
-- Durante CPLs → mix 3-4 (solution/problem aware)
-- Pós-CPL / reabertura de carrinho → 1-2 (most/product aware)
+2. Criar 1 HTML por criativo na pasta `clientes/[slug]/criativos/YYYY-MM-DD_[campanha]/feed/`:
+   - Tamanho: 1080x1080 (feed)
+   - Usar a paleta do `design-guide.md` do cliente
+   - Logo posicionado de forma sutil (canto inferior, com handle do IG abaixo)
+   - Foto do expert (se tiver) integrada ao design, nao colada
+   - Texto seguindo a hierarquia headline > sub > CTA
 
-**B) Sofisticação do mercado**
-- Educação financeira pra imigrantes é mercado de sofisticação **média-alta**: já existem muitos gurus, muitas promessas de enriquecimento. Precisa de mecanismo único e prova forte, não só promessa.
+3. **Criar versao stories** (1080x1920) na pasta `stories/`:
+   - Mesmo conceito do feed, mas re-layoutado pra vertical
+   - Logo no topo (safe area)
+   - CTA na parte de baixo (com safe zone 230px pra controles do IG)
 
-**C) Definir os 10 ângulos**
+4. Renderizar **criativo 1 primeiro** via Playwright:
 
-Distribuir os 10 criativos cobrindo variação de ângulo (pra não cansar no remarketing) e mix de níveis de consciência:
+```bash
+npx playwright screenshot --viewport-size=1080,1080 --full-page "file:///caminho/absoluto/feed/criativo-01.html" "feed/criativo-01.png"
+npx playwright screenshot --viewport-size=1080,1920 --full-page "file:///caminho/absoluto/stories/criativo-01.html" "stories/criativo-01.png"
+```
 
-| # | Ângulo | Nível consciência alvo | Objetivo |
-|---|---|---|---|
-| 1 | História pessoal do expert | 5 | Identificação ("ela era como eu") |
-| 2 | Prova social forte (aluna) | 4 | Credibilidade via resultado alheio |
-| 3 | Contrarian / quebra de crença | 4-5 | "Tudo que te disseram sobre X está errado" |
-| 4 | Curiosity gap / pergunta provocativa | 5 | Parar o scroll |
-| 5 | Autoridade / bastidores | 3 | Mostrar método, não prometer resultado |
-| 6 | Objeção principal destruída | 3-4 | "Não tenho tempo / dinheiro / conhecimento" |
-| 7 | Urgência legítima (janela do evento) | 2-3 | CTA de inscrição |
-| 8 | Identificação com avatar | 4-5 | "Se você é X e sente Y..." |
-| 9 | Mecanismo único (como funciona) | 3 | Nome próprio pro método |
-| 10 | Oferta / convite direto pro evento | 1-2 | Fechar, CTA forte |
-
-Ajustar a mistura se o usuário apontou prioridade específica na Fase 0.
+**CHECKPOINT 2:** Mostrar criativo 1 renderizado (feed + stories). Se aprovado, renderizar os outros. Se pedir ajuste, editar HTML e re-renderizar so esse.
 
 ---
 
-### Fase 2 — Copy dos 10 criativos
-
-Pra cada um dos 10, gerar:
-- **Headline** (máx 8-10 palavras, o gancho visual principal)
-- **Corpo** (2-4 linhas curtas, o argumento central)
-- **CTA** (ação clara, ex: "Garanta sua vaga", "Entre no grupo VIP")
-
-Aplicar princípios Hormozi (100M Offers):
-- **Value equation:** maximizar sonho + probabilidade percebida, minimizar tempo + esforço percebido. Sem inflar promessa — calibrar percepção.
-- **Especificidade:** número específico > número redondo. "Em 47 dias" > "em menos de 2 meses".
-- **Prova > promessa:** toda afirmação forte precisa vir ancorada em prova (aluna, estudo, dado).
-- **Naming:** nomear o método/sistema aumenta valor percebido.
-
-**Tom:**
-- Informal, direto (sem corporativo)
-- Sem travessão (—) em nenhum lugar
-- Frases curtas
-- Sem bullets escondidos em copy de anúncio
-
----
-
-### Fase 3 — Compliance duplo (CRÍTICO — antes de mostrar ao usuário)
-
-Rodar cada copy pelos dois filtros. Se falhar em qualquer um, reescrever.
-
-#### Filtro 1 — Compliance NZ (Fernanda)
-
-**PROIBIDO:**
-- "Aprenda a investir", "Ensino a investir", "Te ensino onde colocar dinheiro"
-- "Carteira recomendada", "Análise de carteira", "Recomendação de ativos"
-- "Garantia de retorno", "X% ao mês/ano garantido"
-- "Vai ficar rico", "Renda passiva garantida"
-- Promessa de resultado financeiro específico em nome da Fernanda
-- **Qualquer termo que sugira segurança no investimento.** Investir tem risco e a gente não pode garantir que é seguro. PROIBIDO usar: "investimento seguro", "forma segura de investir", "proteja seu dinheiro com segurança", "sem risco", "risco zero", "garantido", "100% seguro", "investimento protegido", "dinheiro a salvo", "blindado", "à prova de crise", "estabilidade garantida", "porto seguro", "investimento sem perda", ou qualquer variação que prometa ausência de risco. Mesmo termos suavizados como "mais seguro", "seguro o suficiente", "segurança financeira garantida" são proibidos. Se a copy precisar falar de proteção/preservação, usar enquadramentos descritivos sem prometer segurança (ex: "como brasileiros estão diversificando em moeda forte" em vez de "proteja seu dinheiro de forma segura").
-
-**PERMITIDO (reframe):**
-- "Descubra os caminhos que..." (em vez de "aprenda a")
-- "Veja como [nome da aluna] fez" (prova social, resultado dela, não promessa da Fernanda)
-- "Conheça o método" (educacional, sem promessa)
-- "Entenda como brasileiros no exterior estão protegendo patrimônio" (educativo)
-
-#### Filtro 2 — Política Meta (serviços financeiros)
-
-**PROIBIDO:**
-- Valor monetário específico como promessa ("Ganhe R$10k/mês", "De zero a 100k em 6 meses" — mesmo sendo prova social, se for headline principal a Meta derruba)
-- Targeting implícito pejorativo ("Você que está endividado", "Se você está quebrado")
-- "Renda extra garantida", "Ganhe dinheiro fácil"
-- Antes/depois financeiro com números explícitos na imagem principal
-- Claim de resultado universal ("Funciona pra qualquer um")
-
-**PERMITIDO:**
-- Prova social contextualizada dentro de história ("Lovane saiu da Nova Zelândia sem saber por onde começar. Hoje segue o método da Vem Doleta.")
-- Promessa de aprendizado/conhecimento ("Descubra o que ninguém te contou sobre investir em moeda forte")
-- Call to action pra evento gratuito ("Garanta sua vaga no evento")
-
-**REGRA:** se a copy parecer agressiva demais, reescrever em tom mais editorial/educativo. Meta derruba anúncio financeiro ambicioso — melhor copy mais suave rodando do que copy forte parada no limbo.
-
-**CHECKPOINT 1:** mostrar as 10 copies revisadas (com ângulo + headline + corpo + CTA de cada). Esperar aprovação antes de ir pro visual.
-
----
-
-### Fase 4 — Visual (HTML + Playwright)
-
-#### Identidade visual Vem Doleta
-
-Extraída da página https://vemdoleta.com.br/inscrever-trf:
-
-- **Fundo principal:** `#0A1F1A` (verde-escuro profundo, quase preto)
-- **Fundo alternativo:** `#000000` (preto puro, pra variação)
-- **Destaque primário:** `#C9E265` (verde-limão vibrante — é a cor da palavra-chave, do CTA)
-- **Destaque secundário:** `#D4B572` (dourado/bege, pra detalhes editoriais estilo logo)
-- **Texto principal:** `#FFFFFF`
-- **Texto secundário:** `#B8C5BE` (cinza-esverdeado claro)
-- **Fonte título:** serif editorial (usar `"Playfair Display"` ou `"Cormorant Garamond"` via Google Fonts — combina com o tom institucional do Vem Doleta)
-- **Fonte corpo:** sans-serif (usar `"Inter"` via Google Fonts)
-
-#### Formatos obrigatórios
-
-Cada um dos 10 criativos deve ser renderizado em **DOIS formatos**:
-- **Feed quadrado:** 1080x1080px
-- **Stories vertical:** 1080x1920px
-
-Total: 20 PNGs por rodada.
-
-#### Variação de layout (OBRIGATÓRIA pra remarketing)
-
-Os 10 criativos **NÃO podem ter layout igual**. Distribuir:
-
-- 2 com foto da Fernanda como elemento principal (placeholder se não tiver foto)
-- 2 com citação grande em destaque (estilo editorial)
-- 2 com prova social (nome + localização + ícone/moldura de foto)
-- 2 com headline gigante em fundo sólido (tipografia como elemento principal)
-- 2 com frame editorial (tipo capa de jornal/revista, com tag superior tipo "EVENTO GRATUITO")
-
-#### Regras de responsividade
-
-- Padding lateral mínimo: **80px** (feed) / **100px** (stories)
-- Padding vertical mínimo: **80px** topo e base
-- Tamanhos de fonte seguros:
-  - Headline principal (feed): max 72px
-  - Headline principal (stories): max 88px
-  - Corpo de texto: max 36px
-  - Labels uppercase (tag superior): 14px letter-spacing 0.1em
-  - CTA: 22-28px com padding 18px 36px
-- Sempre checar mentalmente se o texto cabe na altura — se apertar, reduzir fonte ou cortar linha
-- `overflow: hidden` no body
-- Google Fonts como única dependência externa, tudo inline CSS
-
-#### Nomenclatura de arquivos
-
-Padrão: `[CÓDIGO_LANÇAMENTO]_IMG_[NN]` — ex: `JII_MAI_26_IMG_01`, `JII_MAI_26_IMG_02`.
-
-- Prefixo do lançamento: usar o código de 3 letras do evento + mês/ano (ex: JII = Jornada do Investidor Iniciante, AGV = A Grande Virada — perguntar ao usuário se não souber)
-- Sufixo numérico: 2 dígitos (01 a 10)
-- Mesmo nome de arquivo para feed e stories (só muda a pasta)
-
-#### Estrutura de arquivos
+### Fase 3 — Output final
 
 ```
-winvision/clientes/[expert]/criativos/YYYY-MM-DD_[lançamento]/
-  estrategia.md          # diagnóstico Schwartz + distribuição de ângulos
-  copies.md              # as 10 copies finais (headline + corpo + CTA + ângulo)
+clientes/[slug]/criativos/YYYY-MM-DD_[campanha]/
+  copy.md                      <- copy aprovada (headlines + subs + CTAs)
   feed/
-    JII_MAI_26_IMG_01.html + .png   (1080x1080)
-    JII_MAI_26_IMG_02.html + .png
+    criativo-01.html -> criativo-01.png  (1080x1080)
+    criativo-02.html -> criativo-02.png
     ...
-    JII_MAI_26_IMG_10.html + .png
   stories/
-    JII_MAI_26_IMG_01.html + .png   (1080x1920)
-    JII_MAI_26_IMG_02.html + .png
+    criativo-01.html -> criativo-01.png  (1080x1920)
+    criativo-02.html -> criativo-02.png
     ...
-    JII_MAI_26_IMG_10.html + .png
 ```
 
-#### Render
+Mostrar grade visual com todos os criativos rendererizados. Perguntar:
 
-1. Criar HTMLs feed + stories pra criativo 01
-2. Renderizar **apenas criativo 01 feed + stories**:
-   ```bash
-   npx playwright screenshot --viewport-size=1080,1080 --full-page "file:///caminho/feed/criativo-01.html" "feed/criativo-01.png"
-   npx playwright screenshot --viewport-size=1080,1920 --full-page "file:///caminho/stories/criativo-01.html" "stories/criativo-01.png"
-   ```
-3. **CHECKPOINT 2:** mostrar os dois PNGs. Se aprovado, seguir. Se pedir ajuste de estilo, ajustar e re-renderizar só o criativo 01 até aprovação.
-4. Aplicar o estilo aprovado aos outros 9 (mantendo variação de layout da lista acima) e renderizar todos.
+> "Bora subir pro Meta Ads? Se sim, posso usar a `/cockpit-meta` pra criar os anuncios direto na conta de [cliente]."
+
+Se o usuario topar, chamar `/cockpit-meta` passando o path dos criativos pra subir.
 
 ---
 
-## Regras gerais
+## Geração de imagens auxiliares (opcional)
 
-- Texto aprovado na Fase 3 não muda na Fase 4 (visual). Se o usuário quiser mudar copy, volta pra Fase 2.
-- Cada rodada de criativos vai pra pasta datada própria — não sobrescrever lotes anteriores
-- Sem travessão (—) em headline, corpo ou CTA
-- Se o compliance NZ ou Meta tiver dúvida, perguntar ao usuário antes de aprovar a copy
-- Se o briefing do lançamento no Obsidian estiver desatualizado (ex: datas passadas), alertar o usuário antes de seguir
-- Salvar em `winvision/clientes/[expert]/criativos/` — não misturar com `criativos/` de outros lançamentos antigos
+Se o usuario quiser imagem de fundo gerada por IA:
 
-## Atalhos
+### Nano Banana (recomendado)
 
-- Usuário diz "mais 10" ou "novo lote" → skill pergunta se é pro mesmo lançamento e gera outro pacote com ângulos/copies diferentes (não repetir headline do lote anterior — checar `copies.md` das pastas anteriores antes de escrever)
-- Usuário diz "só feed" ou "só stories" → renderiza apenas o formato pedido
-- Usuário diz "refaz o criativo 3" → regera só o criativo 3 (copy + HTML + PNG feed + stories)
+Se a skill `nanobanana-ratos` estiver instalada, usar pra gerar imagens de fundo abstratas ou produto.
+
+**Dica do prompt:** ser especifico + adicionar "no text, clean background, professional" pra resultado limpo.
+
+### Alternativa sem skill
+
+Orientar a gerar em Canva/ChatGPT/Midjourney e jogar na pasta `clientes/[slug]/criativos/[campanha]/imagens/`.
+
+---
+
+## Diferencas entre criativo de IMAGEM (essa skill) e criativo de VIDEO
+
+Esta skill cria apenas **imagens estaticas** (feed 1080x1080 e stories 1080x1920). Pra video, usar editores tradicionais (CapCut, Premiere) ou a `cockpit-remotion` (em desenvolvimento).
+
+Boa pratica: usar imagens como **remarketing** dos videos. Quem viu o video por X segundos vira publico de remarketing, e ve as imagens depois.
+
+---
+
+## Regras
+
+- **Copy aprovada na Fase 1 nao muda na Fase 2** (visual fiel a copia)
+- **Sempre mostrar criativo 1 primeiro** antes de renderizar os demais
+- **Se o usuario pedir ajuste no visual**, editar o HTML e re-renderizar apenas esse criativo
+- **Sem travessoes no texto** por padrao
+- **Setup feito antes nao repetir** — ir direto pro workflow
+- **Identidade visual e do cliente**, nao do Cockpit nem do usuario — sempre ler design-guide.md
+- **Diferenciacao:** se os 5 criativos do lote ficarem parecidos, refazer com angulos mais distintos
+
+## Skills relacionadas
+
+- `/cockpit-dossie` — gera o dossie do cliente que essa skill le
+- `/carrossel` — skill irma, mesmo padrao visual mas para Instagram organico
+- `frontend-design` — usado internamente pra qualidade visual
+- `/cockpit-meta` — pra subir os criativos prontos pro Meta Ads
+- `nanobanana-ratos` — pra gerar imagens de fundo via IA (opcional)
